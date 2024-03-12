@@ -1,0 +1,146 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Grave of the Fireflies</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@next"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tone@next"></script>
+    <style>
+      body,
+      html {
+        height: 100%;
+        margin: 0;
+      }
+
+      .starry-background {
+        background-image: url('https://miro.medium.com/v2/resize:fit:1400/0*LzEO_M6aI1_JRw0M.jpeg');
+        background-position: center;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="starry-background"></div>
+
+    <button id="startBtn">Start</button>
+
+    <div id="imageContainer">
+      <img id="Fireflies1" class="fireflyImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLcxGB859tuGXHzqDUgVMdPEQyIRe80gl3tm0tMvP5tDKGRiZ9--ggqHsYjG38sQelQSU&usqp=CAU" style="position: absolute; top: 55%; left: 25%; width: 150px; height: 150px; object-fit: cover; transform: translate(-50%, -50%); display: none;">
+      <img id="Fireflies2" class="fireflyImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLcxGB859tuGXHzqDUgVMdPEQyIRe80gl3tm0tMvP5tDKGRiZ9--ggqHsYjG38sQelQSU&usqp=CAU" style="position: absolute; top: 55%; left: 25%; width: 150px; height: 150px; object-fit: cover; transform: translate(-50%, -50%); display: none;">
+      <img id="Fireflies3" class="fireflyImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTNdPi4d0rNoIZENmSfqnCSuCz-IGAQN2DfnCax63QWdzde4WXxtdWtDUA6yeuX8D4C7lc&usqp=CAU" style="position: absolute; top: 55%; left: 25%; width: 150px; height: 150px; object-fit: cover; transform: translate(-50%, -50%); display: none;">
+      <img id="Fireflies4" class="fireflyImage" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTlLAx7EclGHRR5jQIz1wwpSWvbkJTCK2-CUoQHoWex5_GvhUpAVLT55ztatoHiK87q-WM&usqp=CAU" style="position: absolute; top: 55%; left: 25%; width: 150px; height: 150px; object-fit: cover; transform: translate(-50%, -50%); display: none;">
+    </div>
+
+    <script>
+      const state = {
+        step: 0,
+        melodyStep: 0,
+        notes: ['G2', ['B3', 'F#4', 'D4'], 'D2', ['A3', 'C#4', 'F#4']],
+        melody: ['F#4', 'C#4', 'C#4', 'C#4', 'C#4', 'C#4', 'B4', 'C#5', 'B4'],
+        melody2: ['A4', 'A4', 'E4', 'F#4', 'E4', 'D4', 'A4'],
+        melody3: ['A3', 'F#3', 'F#3', 'F#3', 'F#3', 'E3', 'C#3', 'A4']
+      };
+
+      const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+      synth.set({
+        oscillator: {
+          type: 'sine'
+        }
+      });
+
+      const melodySynth = new Tone.Synth().toDestination();
+      melodySynth.oscillator.type = 'sine';
+
+      function shuffle(array) {
+        let currentIndex = array.length,
+          temporaryValue, randomIndex;
+        while (0 !== currentIndex) {
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex -= 1;
+          temporaryValue = array[currentIndex];
+          array[currentIndex] = array[randomIndex];
+          array[randomIndex] = temporaryValue;
+        }
+        return array;
+      }
+
+      function shuffleAll() {
+        shuffle(state.notes);
+        shuffle(state.melody);
+        shuffle(state.melody2);
+        shuffle(state.melody3);
+      }
+
+      function cycleImages() {
+        let images = document.querySelectorAll('.fireflyImage');
+        let visibleIdx = Array.from(images).findIndex(img => img.style.display !== 'none');
+
+        if (visibleIdx !== -1) {
+          images[visibleIdx].style.display = 'none';
+        }
+
+        let nextIdx = (visibleIdx + 1) % images.length;
+        images[nextIdx].style.display = 'block';
+      }
+
+      function toggle() {
+        if (Tone.Transport.state === 'started') {
+          Tone.Transport.stop();
+          document.getElementById('startBtn').innerText = 'Start';
+        } else {
+          Tone.Transport.start();
+          document.getElementById('startBtn').innerText = 'Stop';
+          shuffleAll();
+        }
+      }
+
+      function playMelody(time) {
+        const melodyNote = state.melody[state.melodyStep % state.melody.length];
+        melodySynth.triggerAttackRelease(melodyNote, '4n', time);
+        state.melodyStep++;
+      }
+
+      function scheduleMusic() {
+        Tone.Transport.scheduleRepeat((time) => {
+          playBass(time);
+        }, '1m');
+
+        Tone.Transport.scheduleRepeat((time) => {
+          playChords(time);
+        }, '2n');
+
+        Tone.Transport.scheduleRepeat((time) => {
+          playMelody(time);
+          cycleImages();
+        }, '4n');
+      }
+
+      function playBass(time) {
+        const note = state.notes[state.step % state.notes.length];
+        if (!Array.isArray(note)) {
+          synth.triggerAttackRelease(note, '1m', time);
+          state.step++;
+        }
+      }
+
+      function playChords(time) {
+        const chord = state.notes[state.step % state.notes.length];
+        if (Array.isArray(chord)) {
+          synth.triggerAttackRelease(chord, '2n', time);
+          state.step++;
+        }
+      }
+
+      document.getElementById('startBtn').addEventListener('click', toggle);
+
+      window.addEventListener('load', () => {
+        Tone.Transport.bpm.value = 100;
+        scheduleMusic();
+      });
+    </script>
+
+  </body>
+</html>
